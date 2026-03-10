@@ -1,0 +1,20 @@
+Package: BrandTargetArea
+Title: Brand Target Area Visualization App
+Version: 1.0.0
+Authors@R: 
+    person("Bayer", "Crop Science", , email = "example@bayer.com", role = c("aut", "cre"))
+Description: An interactive Shiny application for visualizing brand target 
+    areas and P4 breeding locations across the United States. Displays choropleth 
+    maps of acreage by county and breeding site locations with filtering capabilities.
+License: file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.0
+Imports:
+    shiny,
+    leaflet,
+    sf,
+    dplyr,
+    tigris,
+    DT,
+    arrow
