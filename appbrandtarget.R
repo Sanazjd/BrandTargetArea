@@ -3,11 +3,12 @@ library(shiny)
 library(leaflet)
 library(sf)
 library(dplyr)
-library(tigris)
 library(DT)
 library(arrow)  # For reading Parquet files
 
-options(tigris_use_cache = TRUE)
+# Load pre-saved shapefiles (avoids downloads on Posit Connect)
+counties_base <- readRDS("data/counties_sf.rds")
+states_base <- readRDS("data/states_sf.rds")
 
 df_p4_file <- as.data.frame(read_parquet("data/NA_market_P4_breeding_locationsII.parquet"))
 # normalize coordinates same as below so unique-ification works
@@ -157,7 +158,7 @@ server <- function(input, output, session) {
 
   # prepare counties polygons with acreage
   counties_sf <- reactive({
-    cnts <- counties(cb = TRUE, year = 2022, class = "sf") %>%
+    cnts <- counties_base %>%
       mutate(GEOID = as.character(GEOID))
     fv <- filtered_FV()
     # ensure fv has the expected fips column
@@ -171,9 +172,6 @@ server <- function(input, output, session) {
     # if sum_acreage missing, use 0
     if(!"sum_acreage" %in% names(cnts)) cnts$sum_acreage <- NA
     pal <- colorNumeric(palette = "YlOrRd", domain = cnts$sum_acreage, na.color = "transparent")
-    
-    # Get state boundaries for thicker lines
-    states_sf <- states(cb = TRUE, year = 2022, class = "sf")
 
     leaflet() %>%
       addProviderTiles(providers$CartoDB.Positron) %>%
@@ -184,7 +182,7 @@ server <- function(input, output, session) {
                   color = "#444444",
                   weight = 0.2,
                   popup = ~paste0(NAME, ", ", STATEFP, "<br>Acreage: ", ifelse(is.na(sum_acreage), "0", sum_acreage))) %>%
-      addPolygons(data = states_sf,
+      addPolygons(data = states_base,
                   fill = FALSE,
                   color = "#000000",
                   weight = 1) %>%
