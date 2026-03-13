@@ -17,4 +17,5 @@ Imports:
     dplyr,
     tigris,
     DT,
-    arrow
+    arrow,
+    aws.s3
