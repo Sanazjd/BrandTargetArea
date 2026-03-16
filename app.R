@@ -18,7 +18,7 @@ CACHE_DIR <- file.path(tempdir(), "s3_cache")
 if (!dir.exists(CACHE_DIR)) dir.create(CACHE_DIR, recursive = TRUE)
 
 # Cache duration in seconds (1 hour = 3600, 24 hours = 86400)
-CACHE_DURATION_SECONDS <- 3600
+CACHE_DURATION_SECONDS <- 86400
 
 #' Load a CSV or Parquet file from S3 with local caching
 #'
@@ -71,9 +71,12 @@ load_data_from_s3 <- function(bucket, file, colClasses = NA, cache_duration = CA
   return(data)
 }
 
-# Load pre-saved shapefiles (avoids downloads on Posit Connect)
-counties_base <- readRDS("data/counties_sf.rds")
-states_base <- readRDS("data/states_sf.rds")
+# Load pre-saved shapefiles (simplified for faster loading)
+# Exclude Alaska (02) and Hawaii (15)
+counties_base <- readRDS("data/counties_sf_simple.rds")
+counties_base <- counties_base[!counties_base$STATEFP %in% c("02", "15"), ]
+states_base <- readRDS("data/states_sf_simple.rds")
+states_base <- states_base[!states_base$STATEFP %in% c("02", "15"), ]
 
 # Read parquet files from S3
 df_p4_file <- as.data.frame(load_data_from_s3(bucket = S3_BUCKET, file = "NA_market_P4_breeding_locationsII.parquet"))
@@ -182,10 +185,12 @@ server <- function(input, output, session) {
     counts <- reactive_brand_counts()
     current_selection <- if(is.null(input$brand_name)) "All" else input$brand_name
     if(is.null(counts) || nrow(counts) == 0){
-      selectInput("brand_name", "Brand Name:", choices = c("All" = "All"), selected = current_selection)
+      selectizeInput("brand_name", "Brand Name:", choices = c("All" = "All"), selected = current_selection,
+                     options = list(placeholder = "Type to search..."))
     } else {
       choices <- setNames(counts$brand_name, paste0(counts$brand_name, " (", counts$n, ")"))
-      selectInput("brand_name", "Brand Name:", choices = c("All" = "All", choices), selected = current_selection)
+      selectizeInput("brand_name", "Brand Name:", choices = c("All" = "All", choices), selected = current_selection,
+                     options = list(placeholder = "Type to search..."))
     }
   })
   
