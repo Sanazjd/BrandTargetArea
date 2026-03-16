@@ -127,13 +127,19 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       h4("FieldView"),
-      uiOutput("brand_name_ui"),
+      selectizeInput("brand_name", "Brand Name:",
+                     choices = c("All" = "All"),
+                     selected = "All",
+                     options = list(placeholder = "Type to search...")),
       selectInput("crop_year", "Crop Year:",
                   choices = c("All", sort(unique(df_FV_file$crop_year))),
                   selected = "All"),
       hr(),
       h4("P4 Locations 2025"),
-      uiOutput("market_ui"),
+      selectizeInput("market", "Market:",
+                     choices = c("All" = "All"),
+                     selected = "All",
+                     options = list(placeholder = "Type to search...")),
       selectInput("RM_Recomme", "County RM:",
                   choices = c("All", sort(unique(df_p4_file$RM_Recomme))),
                   selected = "All")
@@ -180,30 +186,41 @@ server <- function(input, output, session) {
       arrange(market)
   })
   
-  # dynamic Brand Name UI
-  output$brand_name_ui <- renderUI({
+  # Update Brand Name choices when filters change
+  observe({
     counts <- reactive_brand_counts()
-    current_selection <- if(is.null(input$brand_name)) "All" else input$brand_name
+    current_selection <- isolate(input$brand_name)
     if(is.null(counts) || nrow(counts) == 0){
-      selectizeInput("brand_name", "Brand Name:", choices = c("All" = "All"), selected = current_selection,
-                     options = list(placeholder = "Type to search..."))
+      choices <- c("All" = "All")
     } else {
-      choices <- setNames(counts$brand_name, paste0(counts$brand_name, " (", counts$n, ")"))
-      selectizeInput("brand_name", "Brand Name:", choices = c("All" = "All", choices), selected = current_selection,
-                     options = list(placeholder = "Type to search..."))
+      brand_choices <- setNames(counts$brand_name, paste0(counts$brand_name, " (", counts$n, ")"))
+      choices <- c("All" = "All", brand_choices)
     }
+    # Only update if current selection is still valid, otherwise keep it
+    selected <- if(is.null(current_selection) || current_selection == "All" || current_selection %in% counts$brand_name) {
+      current_selection
+    } else {
+      "All"
+    }
+    updateSelectizeInput(session, "brand_name", choices = choices, selected = selected)
   })
   
-  # dynamic Market UI with location counts
-  output$market_ui <- renderUI({
+  # Update Market choices when filters change
+  observe({
     counts <- reactive_market_counts()
-    current <- if(is.null(input$market)) "All" else input$market
+    current <- isolate(input$market)
     if(is.null(counts) || nrow(counts) == 0){
-      selectInput("market", "Market:", choices = c("All" = "All"), selected = current)
+      choices <- c("All" = "All")
     } else {
-      choices <- setNames(counts$market, paste0(counts$market, " (", counts$n, ")"))
-      selectInput("market", "Market:", choices = c("All" = "All", choices), selected = current)
+      market_choices <- setNames(counts$market, paste0(counts$market, " (", counts$n, ")"))
+      choices <- c("All" = "All", market_choices)
     }
+    selected <- if(is.null(current) || current == "All" || current %in% counts$market) {
+      current
+    } else {
+      "All"
+    }
+    updateSelectizeInput(session, "market", choices = choices, selected = selected)
   })
   
   # reactive filtered tables
